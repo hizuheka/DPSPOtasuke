@@ -3,7 +3,10 @@ package main
 import (
 	"bytes"
 	"errors"
+	"flag"
 	"fmt"
+	"os"
+	"reflect"
 	"runtime"
 	"strings"
 	"syscall"
@@ -13,7 +16,10 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-type HANDLE uintptr
+type (
+	HANDLE uintptr
+	HWND   HANDLE
+)
 
 var (
 	kernel32 = syscall.NewLazyDLL("kernel32")
@@ -56,18 +62,73 @@ var (
 	procSetClipboardData = moduser32.NewProc("SetClipboardData")
 )
 
+var (
+	s bool
+	o string
+)
+
 func main() {
-	fmt.Println("GetClipboardHtml")
+	flag.BoolVar(&s, "s", false, "フォーマット一覧の表示")
+	flag.StringVar(&o, "o", "", "ファイル出力")
+	flag.Parse()
+
+	switch {
+	case s:
+		if err := ShowClipboardFormat(); err != nil {
+			fmt.Println("ERR:" + err.Error())
+		}
+	case o != "":
+		if err := SaveClipboardHTMLFormat(o); err != nil {
+			fmt.Println("ERR:" + err.Error())
+		}
+	default:
+		fmt.Println("GetClipboardHtml")
+		v, err := GetClipboardHtml()
+		if err != nil {
+			fmt.Println("ERR:" + err.Error())
+		}
+		// fmt.Println(v)
+
+		fmt.Println("SetClipboardHtml")
+		newV := strings.ReplaceAll(v, "make", "XXXX")
+		if err := SetClipboardHTML(newV); err != nil {
+			fmt.Println("ERR:" + err.Error())
+		}
+	}
+}
+
+func SaveClipboardHTMLFormat(path string) error {
 	v, err := GetClipboardHtml()
 	if err != nil {
-		fmt.Println("ERR:" + err.Error())
+		return err
 	}
-	// fmt.Println(v)
+	if err := os.WriteFile(o, []byte(v), 0644); err != nil {
+		return err
+	}
 
-	fmt.Println("SetClipboardHtml")
-	newV := strings.ReplaceAll(v, "make", "XXXX")
-	if err := SetClipboardHTML(newV); err != nil {
-		fmt.Println("ERR:" + err.Error())
+	return nil
+}
+
+func ShowClipboardFormat() error {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	if err := waitOpenClipboard(); err != nil {
+		return fmt.Errorf("waitOpenClipboard(%w)", err)
+	}
+	defer W32CloseClipboard()
+
+	var cf uint
+	for {
+		cf = W32EnumClipboardFormats(cf)
+		if cf == 0 {
+			return nil
+		}
+		if name, b := W32GetClipboardFormatName(cf); b {
+			fmt.Printf("CF=%d : %s\n", cf, name)
+		} else {
+			fmt.Printf("CF=%d\n", cf)
+		}
 	}
 }
 
@@ -90,30 +151,36 @@ func GetClipboardHtml() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Printf("HTML Format = %d\n", cf)
+	// fmt.Printf("HTML Format = %d\n", cf)
 
 	// ハンドルを取得します
-	h := GetClipboardData(cf)
-	if h == 0 {
+	hMem := GetClipboardData(cf)
+	if hMem == 0 {
 		return "", errors.New("クリップボードのハンドルの取得に失敗しました。")
 	}
-	fmt.Printf("HANDLE = %v\n", h)
+	// fmt.Printf("HANDLE = %v\n", hMem)
 
 	// メモリアドレスを取得します
-	pMem, err := GlobalLock(h)
+	pMem, err := GlobalLock(hMem)
 	if err != nil {
 		return "", err
 	}
-	defer GlobalUnlock(h)
-	fmt.Printf("pMem = %v\n", pMem)
+	defer GlobalUnlock(hMem)
+	// fmt.Printf("pMem = %v\n", pMem)
 
 	// 文字列のバイト数を取得します
 	slength := Lstrlen(pMem)
-	fmt.Printf("sLength=%d\n", slength)
+	// fmt.Printf("sLength=%d\n", slength)
 
-	data := make([]byte, slength)
-	MoveMemory((unsafe.Pointer(&data[0])), unsafe.Pointer(pMem), uint32(len(data)))
+	// data := make([]byte, slength)
+	// MoveMemory((unsafe.Pointer(&data[0])), unsafe.Pointer(pMem), uint32(len(data)))
 	// fmt.Printf("data = %s\n", string(data))
+
+	var data []byte
+	h := (*reflect.SliceHeader)(unsafe.Pointer(&data))
+	h.Data = pMem
+	h.Len = slength
+	h.Cap = slength
 
 	return string(data), nil
 }
@@ -268,16 +335,6 @@ func Lstrlen(lpString uintptr) int {
 	return int(ret)
 }
 
-func EnumClipboardFormats(format uint) (uint, bool) {
-	ret, _, _ := procEnumClipboardFormats.Call(uintptr(format))
-	cf := uint(ret)
-	if cf == 0 {
-		return cf, false
-	} else {
-		return cf, true
-	}
-}
-
 func GetHtmlClipboardFormat() (uint, error) {
 	var cf uint
 	loop := true
@@ -395,4 +452,46 @@ func setClipboardData(uFormat uintptr, hMem uintptr) (uintptr, error) {
 		return 0, err
 	}
 	return r1, nil
+}
+
+func W32OpenClipboard(hWndNewOwner HWND) bool {
+	ret, _, _ := procOpenClipboard.Call(
+		uintptr(hWndNewOwner))
+	return ret != 0
+}
+
+func W32CloseClipboard() bool {
+	ret, _, _ := procCloseClipboard.Call()
+	return ret != 0
+}
+
+func W32EnumClipboardFormats(format uint) uint {
+	ret, _, _ := procEnumClipboardFormats.Call(
+		uintptr(format))
+	return uint(ret)
+}
+
+func EnumClipboardFormats(format uint) (uint, bool) {
+	ret, _, _ := procEnumClipboardFormats.Call(uintptr(format))
+	cf := uint(ret)
+	if cf == 0 {
+		return cf, false
+	} else {
+		return cf, true
+	}
+}
+
+func W32GetClipboardFormatName(format uint) (string, bool) {
+	cchMaxCount := 255
+	buf := make([]uint16, cchMaxCount)
+	ret, _, _ := procGetClipboardFormatName.Call(
+		uintptr(format),
+		uintptr(unsafe.Pointer(&buf[0])),
+		uintptr(cchMaxCount))
+
+	if ret > 0 {
+		return syscall.UTF16ToString(buf), true
+	}
+
+	return "Requested format does not exist or is predefined", false
 }
