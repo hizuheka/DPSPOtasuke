@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"flag"
@@ -19,6 +20,14 @@ import (
 type (
 	HANDLE uintptr
 	HWND   HANDLE
+)
+
+const (
+	// 初期バッファサイズ
+	initialBufSize = 10000
+	// バッファサイズの最大値。Scannerは必要に応じこのサイズまでバッファを大きくして各行をスキャンする。
+	// この値がinitialBufSize以下の場合、Scannerはバッファの拡張を一切行わず与えられた初期バッファのみを使う。
+	maxBufSize = 1000000
 )
 
 var (
@@ -63,13 +72,15 @@ var (
 )
 
 var (
-	s bool
-	o string
+	s    bool
+	o    string
+	html bool
 )
 
 func main() {
 	flag.BoolVar(&s, "s", false, "フォーマット一覧の表示")
 	flag.StringVar(&o, "o", "", "ファイル出力")
+	flag.BoolVar(&html, "html", false, "HTMLで出力")
 	flag.Parse()
 
 	switch {
@@ -78,31 +89,73 @@ func main() {
 			fmt.Println("ERR:" + err.Error())
 		}
 	case o != "":
-		if err := SaveClipboardHTMLFormat(o); err != nil {
-			fmt.Println("ERR:" + err.Error())
+		switch {
+		case html:
+			if err := SaveClipboardHTML(o); err != nil {
+				fmt.Println("ERR:" + err.Error())
+			}
+		default:
+			if err := SaveClipboard(o); err != nil {
+				fmt.Println("ERR:" + err.Error())
+			}
 		}
 	default:
-		fmt.Println("GetClipboardHtml")
+		// fmt.Println("GetClipboardHtml")
 		v, err := GetClipboardHtml()
 		if err != nil {
 			fmt.Println("ERR:" + err.Error())
 		}
 		// fmt.Println(v)
 
-		fmt.Println("SetClipboardHtml")
-		newV := strings.ReplaceAll(v, "make", "XXXX")
+		// fmt.Println("SetClipboardHtml")
+		// newV := strings.ReplaceAll(v, "make", "XXXX")
+		newV := strings.ReplaceAll(v, "</span><span>", "</span><hr><span>")
+		newV = strings.ReplaceAll(newV, `<p style="margin: 0px;"> like`, `<p style="margin: 0px;"><img src="https://statics.teams.cdn.office.net/evergreen-assets/personal-expressions/v2/assets/emoticons/yes/default/20_f.png?v=v70">`)
 		if err := SetClipboardHTML(newV); err != nil {
 			fmt.Println("ERR:" + err.Error())
 		}
 	}
 }
 
-func SaveClipboardHTMLFormat(path string) error {
+func SaveClipboard(path string) error {
 	v, err := GetClipboardHtml()
 	if err != nil {
 		return err
 	}
 	if err := os.WriteFile(o, []byte(v), 0644); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func SaveClipboardHTML(path string) error {
+	v, err := GetClipboardHtml()
+	if err != nil {
+		return err
+	}
+	outf, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer outf.Close()
+	scanner := bufio.NewScanner(strings.NewReader(v))
+	buf := make([]byte, initialBufSize)
+	scanner.Buffer(buf, maxBufSize)
+	writer := bufio.NewWriter(outf)
+	defer writer.Flush()
+
+	lineNumber := 0
+	for scanner.Scan() {
+		lineNumber++
+		if lineNumber >= 7 {
+			if _, err := writer.WriteString(scanner.Text() + "\n"); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
 		return err
 	}
 
