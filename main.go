@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strings"
 	"syscall"
@@ -101,9 +102,10 @@ func main() {
 		}
 	default:
 		replacer := strings.NewReplacer(
-			"</span><span>", "</span><hr><span>",
+			// "</span><span>", "</span><hr><span>",
 			`<p style="margin: 0px;"> like`, `<p style="margin: 0px;"><img src="https://statics.teams.cdn.office.net/evergreen-assets/personal-expressions/v2/assets/emoticons/yes/default/20_f.png?v=v70">`,
 		)
+		re := regexp.MustCompile(`(?U)<span itemscope="" itemtype="http://schema.skype.com/Mention" itemid="0">(.*)</span>`)
 		// fmt.Println("GetClipboardHtml")
 		v, err := GetClipboardHtml()
 		if err != nil {
@@ -116,6 +118,7 @@ func main() {
 		// newV := strings.ReplaceAll(v, "</span><span>", "</span><hr><span>")
 		// newV = strings.ReplaceAll(newV, `<p style="margin: 0px;"> like`, `<p style="margin: 0px;"><img src="https://statics.teams.cdn.office.net/evergreen-assets/personal-expressions/v2/assets/emoticons/yes/default/20_f.png?v=v70">`)
 		newV := replacer.Replace(v)
+		newV = re.ReplaceAllString(newV, "<span>$1</span><br>")
 		if err := SetClipboardHTML(newV); err != nil {
 			fmt.Println("ERR:" + err.Error())
 		}
