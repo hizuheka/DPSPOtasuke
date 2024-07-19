@@ -100,6 +100,10 @@ func main() {
 			}
 		}
 	default:
+		replacer := strings.NewReplacer(
+			"</span><span>", "</span><hr><span>",
+			`<p style="margin: 0px;"> like`, `<p style="margin: 0px;"><img src="https://statics.teams.cdn.office.net/evergreen-assets/personal-expressions/v2/assets/emoticons/yes/default/20_f.png?v=v70">`,
+		)
 		// fmt.Println("GetClipboardHtml")
 		v, err := GetClipboardHtml()
 		if err != nil {
@@ -109,8 +113,9 @@ func main() {
 
 		// fmt.Println("SetClipboardHtml")
 		// newV := strings.ReplaceAll(v, "make", "XXXX")
-		newV := strings.ReplaceAll(v, "</span><span>", "</span><hr><span>")
-		newV = strings.ReplaceAll(newV, `<p style="margin: 0px;"> like`, `<p style="margin: 0px;"><img src="https://statics.teams.cdn.office.net/evergreen-assets/personal-expressions/v2/assets/emoticons/yes/default/20_f.png?v=v70">`)
+		// newV := strings.ReplaceAll(v, "</span><span>", "</span><hr><span>")
+		// newV = strings.ReplaceAll(newV, `<p style="margin: 0px;"> like`, `<p style="margin: 0px;"><img src="https://statics.teams.cdn.office.net/evergreen-assets/personal-expressions/v2/assets/emoticons/yes/default/20_f.png?v=v70">`)
+		newV := replacer.Replace(v)
 		if err := SetClipboardHTML(newV); err != nil {
 			fmt.Println("ERR:" + err.Error())
 		}
@@ -248,7 +253,7 @@ func SetClipboardHTML(html string) error {
 	if err != nil {
 		return fmt.Errorf("ERR: UTF16PtrFromString(%w)", err)
 	}
-	fmt.Printf("cfHtml = %v\n", uFormat)
+	// fmt.Printf("cfHtml = %v\n", uFormat)
 
 	// クリップボードを開きます
 	if err := waitOpenClipboard(); err != nil {
@@ -310,17 +315,17 @@ func SetClipboardHTML(html string) error {
 			globalFree(hMem)
 		}
 	}()
-	fmt.Printf("hMem = %v\n", hMem)
+	// fmt.Printf("hMem = %v\n", hMem)
 	// 文字列のバイト数を取得します
-	slength := Lstrlen(hMem)
-	fmt.Printf("sLength=%d\n", slength)
+	// slength := Lstrlen(hMem)
+	// fmt.Printf("sLength=%d\n", slength)
 
 	ptr, err := GlobalLock(HANDLE(hMem))
 	if err != nil {
 		return fmt.Errorf("ERR: globalLock(%w)", err)
 	}
 	defer GlobalUnlock(HANDLE(hMem))
-	fmt.Printf("ptr = %v\n", ptr)
+	// fmt.Printf("ptr = %v\n", ptr)
 
 	MoveMemory(unsafe.Pointer(ptr), unsafe.Pointer(&buffer.Bytes()[0]), uint32(len(buffer.Bytes())))
 
