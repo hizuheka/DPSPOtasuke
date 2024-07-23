@@ -105,13 +105,17 @@ func main() {
 			// "</span><span>", "</span><hr><span>",
 			// "</span>", "</span><br>",
 			"</span><span", "</span><br><span",
-			`<p style="margin: 0px;"> like`, `<p style="margin: 0px;"><img src="https://statics.teams.cdn.office.net/evergreen-assets/personal-expressions/v2/assets/emoticons/yes/default/20_f.png?v=v70">`,
+			`<span><span style="font-family: -apple-system,`, `<tr><td><span><span style="font-family: -apple-system,`,
+			`&nbsp;</span></span>`, `</span></span></td></tr>`,
 		)
-		// replacer2 := strings.NewReplacer(
-		// 	"<span>", `<span style="color:#0000ff;">`,
-		// )
+		replacer2 := strings.NewReplacer(
+			`dir="ltr"><tr>`, `dir="ltr"><table><tr>`,
+			`</tr></span></span>`, `</tr></table></span></span>`,
+		)
 		re1 := regexp.MustCompile(`(?U)<span itemscope="" itemtype="http://schema.skype.com/Mention" itemid="\d">(.*)</span>`)
 		re2 := regexp.MustCompile(`(?U)<p style="margin: 0px;">(\[\d{4}/\d{2}/\d{2} \d+:\d{2}\]) (.*)</p>`)
+		re_like := regexp.MustCompile(`like (\d+)`)
+		re_heart := regexp.MustCompile(`heart (\d+)`)
 		// fmt.Println("GetClipboardHtml")
 		v, err := GetClipboardHtml()
 		if err != nil {
@@ -124,11 +128,13 @@ func main() {
 		// newV := strings.ReplaceAll(v, "</span><span>", "</span><hr><span>")
 		// newV = strings.ReplaceAll(newV, `<p style="margin: 0px;"> like`, `<p style="margin: 0px;"><img src="https://statics.teams.cdn.office.net/evergreen-assets/personal-expressions/v2/assets/emoticons/yes/default/20_f.png?v=v70">`)
 		newV := replacer1.Replace(v)
-		// newV = replacer2.Replace(newV)
+		newV = replacer2.Replace(newV)
 		// メンション
 		// newV = re.ReplaceAllString(newV, `<span style="font-weight:bold; color:#FF0000;">$1</span><br>`)
-		newV = re1.ReplaceAllString(newV, `<p style="font-weight:bold; color:#FF0000;">$1</p>`)
-		newV = re2.ReplaceAllString(newV, `<p style="font-weight:bold; color:#006400;">$1 $2</p>`)
+		newV = re1.ReplaceAllString(newV, `<p style="font-weight:bold; color:rgb(98, 100, 167);">$1</p>`)
+		newV = re2.ReplaceAllString(newV, `<p style="font-weight:bold; font-size: 12px;">$1 $2</p>`)
+		newV = re_like.ReplaceAllString(newV, `&#x1F44D; $1`)
+		newV = re_heart.ReplaceAllString(newV, `&#x1f9e1; $1`)
 		if err := SetClipboardHTML(newV); err != nil {
 			fmt.Println("ERR:" + err.Error())
 		}
