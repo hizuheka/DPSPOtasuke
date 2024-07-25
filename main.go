@@ -102,24 +102,32 @@ func main() {
 		}
 	default:
 		replacer1 := strings.NewReplacer(
-			// "</span><span>", "</span><hr><span>",
-			// "</span>", "</span><br>",
-			"</span><span", "</span><br><span",
-			`<span><span style="font-family: -apple-system,`, `<tr><td><span><span style="font-family: -apple-system,`,
-			`&nbsp;</span></span>`, `</span></span></td></tr>`,
+			// `<span><span style="font-family: -apple-system,`, `<tr><td><span><span style="font-family: -apple-system,`,
+			`dir="ltr">`, `dir="ltr"><table><tr><td>`,
+			`&nbsp;</span></span><span>`, `</span></span></td></tr><tr><td><span>`,
+			// `&nbsp;</span></span></span></span>`, `</span></span></td></tr></table></span></span>`,
+			`<blockquote`, `<table><tr><td><blockquote`,
+			`</blockquote>`, "</blockquote></td></tr></table>",
 		)
 		replacer2 := strings.NewReplacer(
-			`dir="ltr"><tr>`, `dir="ltr"><table><tr>`,
-			`</tr></span></span>`, `</tr></table></span></span>`,
+			"</span><span", "</span><br><span",
+		// `</tr></span></span>`, `</tr></table></span></span>`,
 		)
 		re1 := regexp.MustCompile(`(?U)<span itemscope="" itemtype="http://schema.skype.com/Mention" itemid="\d">(.*)</span>`)
 		re2 := regexp.MustCompile(`(?U)<p style="margin: 0px;">(\[\d{4}/\d{2}/\d{2} \d+:\d{2}\]) (.*)</p>`)
+		re3 := regexp.MustCompile(`(?U)&nbsp;((</span>)+)</span></span><!--EndFragment-->`)
 		re_like := regexp.MustCompile(`like (\d+)`)
 		re_heart := regexp.MustCompile(`heart (\d+)`)
 		// fmt.Println("GetClipboardHtml")
 		v, err := GetClipboardHtml()
 		if err != nil {
 			fmt.Println("ERR:" + err.Error())
+			return
+		}
+		if strings.Contains(v, "<li>") {
+			fmt.Println("クリップボードの内容が誤っています。再取得してください。")
+			bufio.NewScanner(os.Stdin).Scan()
+			return
 		}
 		// fmt.Println(v)
 
@@ -133,6 +141,7 @@ func main() {
 		// newV = re.ReplaceAllString(newV, `<span style="font-weight:bold; color:#FF0000;">$1</span><br>`)
 		newV = re1.ReplaceAllString(newV, `<p style="font-weight:bold; color:rgb(98, 100, 167);">$1</p>`)
 		newV = re2.ReplaceAllString(newV, `<p style="font-weight:bold; font-size: 12px;">$1 $2</p>`)
+		newV = re3.ReplaceAllString(newV, `$1</td></tr></table></span></span><!--EndFragment-->`)
 		newV = re_like.ReplaceAllString(newV, `&#x1F44D; $1`)
 		newV = re_heart.ReplaceAllString(newV, `&#x1f9e1; $1`)
 		if err := SetClipboardHTML(newV); err != nil {
