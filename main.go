@@ -125,6 +125,7 @@ func main() {
 		re_doh := regexp.MustCompile(`doh (\d+)`)
 		re_thanks := regexp.MustCompile(`thanks (\d+)`)
 		re_bow := regexp.MustCompile(`bow (\d+)`)
+		re_partypopper := regexp.MustCompile(`1f389_partypopper (\d+)`)
 		// fmt.Println("GetClipboardHtml")
 		v, err := GetClipboardHtml()
 		if err != nil {
@@ -158,6 +159,7 @@ func main() {
 		newV = re_doh.ReplaceAllString(newV, `😣 $1`)
 		newV = re_thanks.ReplaceAllString(newV, `🙇🏼‍♀️ $1`)
 		newV = re_bow.ReplaceAllString(newV, `🙇🏼‍♀️ $1`)
+		newV = re_partypopper.ReplaceAllString(newV, `&#x1f389; $1`)
 		if err := SetClipboardHTML(newV); err != nil {
 			fmt.Println("ERR:" + err.Error())
 		}
