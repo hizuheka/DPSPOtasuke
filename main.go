@@ -102,30 +102,33 @@ func main() {
 		}
 	default:
 		replacer1 := strings.NewReplacer(
-			// `<span><span style="font-family: -apple-system,`, `<tr><td><span><span style="font-family: -apple-system,`,
 			`dir="ltr">`, `dir="ltr"><table><tr><td>`,
 			`&nbsp;</span></span><span>`, `</span></span></td></tr><tr><td><span>`,
-			// `&nbsp;</span></span></span></span>`, `</span></span></td></tr></table></span></span>`,
 			`<blockquote`, `<table><tr><td><blockquote`,
 			`</blockquote>`, "</blockquote></td></tr></table>",
 		)
 		replacer2 := strings.NewReplacer(
-			"</span><span", "</span><br><span",
-		// `</tr></span></span>`, `</tr></table></span></span>`,
+			`</span><span><span style="font-family: -apple-system`, `</span></td></tr><tr><td><span><span style="font-family: -apple-system`,
 		)
+		replacer3 := strings.NewReplacer(
+			"</span><span", "</span><br><span",
+		)
+		re_emoji := map[*regexp.Regexp]string{
+			regexp.MustCompile(`like (\d+)`):              `&#x1F44D; $1`,
+			regexp.MustCompile(`heart (\d+)`):             `&#x1f9e1; $1`,
+			regexp.MustCompile(`sad (\d+)`):               `&#x1f622; $1`,
+			regexp.MustCompile(`thewave1 (\d+)`):          `&#x1f30a; $1`,
+			regexp.MustCompile(`surprised (\d+)`):         `&#x1f632; $1`,
+			regexp.MustCompile(`bowing (\d+)`):            `&#x1f647; $1`,
+			regexp.MustCompile(`doh (\d+)`):               `😣 $1`,
+			regexp.MustCompile(`thanks (\d+)`):            `🙇🏼‍♀️ $1`,
+			regexp.MustCompile(`bow (\d+)`):               `🙇🏼‍♀️ $1`,
+			regexp.MustCompile(`1f389_partypopper (\d+)`): `&#x1f389; $1`,
+		}
 		re1 := regexp.MustCompile(`(?U)<span itemscope="" itemtype="http://schema.skype.com/Mention" itemid="\d">(.*)</span>`)
 		re2 := regexp.MustCompile(`(?U)<p style="margin: 0px;">(\[\d{4}/\d{2}/\d{2} \d+:\d{2}\]) (.*)</p>`)
 		re3 := regexp.MustCompile(`(?U)&nbsp;((</span>)+)</span></span><!--EndFragment-->`)
-		re_like := regexp.MustCompile(`like (\d+)`)
-		re_heart := regexp.MustCompile(`heart (\d+)`)
-		re_sad := regexp.MustCompile(`sad (\d+)`)
-		re_wave1 := regexp.MustCompile(`thewave1 (\d+)`)
-		re_surprised := regexp.MustCompile(`surprised (\d+)`)
-		re_bowing := regexp.MustCompile(`bowing (\d+)`)
-		re_doh := regexp.MustCompile(`doh (\d+)`)
-		re_thanks := regexp.MustCompile(`thanks (\d+)`)
-		re_bow := regexp.MustCompile(`bow (\d+)`)
-		re_partypopper := regexp.MustCompile(`1f389_partypopper (\d+)`)
+
 		// fmt.Println("GetClipboardHtml")
 		v, err := GetClipboardHtml()
 		if err != nil {
@@ -137,29 +140,19 @@ func main() {
 			bufio.NewScanner(os.Stdin).Scan()
 			return
 		}
-		// fmt.Println(v)
 
-		// fmt.Println("SetClipboardHtml")
-		// newV := strings.ReplaceAll(v, "make", "XXXX")
-		// newV := strings.ReplaceAll(v, "</span><span>", "</span><hr><span>")
-		// newV = strings.ReplaceAll(newV, `<p style="margin: 0px;"> like`, `<p style="margin: 0px;"><img src="https://statics.teams.cdn.office.net/evergreen-assets/personal-expressions/v2/assets/emoticons/yes/default/20_f.png?v=v70">`)
 		newV := replacer1.Replace(v)
 		newV = replacer2.Replace(newV)
+		newV = replacer3.Replace(newV)
 		// メンション
-		// newV = re.ReplaceAllString(newV, `<span style="font-weight:bold; color:#FF0000;">$1</span><br>`)
 		newV = re1.ReplaceAllString(newV, `<p style="font-weight:bold; color:rgb(98, 100, 167);">$1</p>`)
 		newV = re2.ReplaceAllString(newV, `<p style="font-weight:bold; font-size: 12px;">$1 $2</p>`)
 		newV = re3.ReplaceAllString(newV, `$1</td></tr></table></span></span><!--EndFragment-->`)
-		newV = re_like.ReplaceAllString(newV, `&#x1F44D; $1`)
-		newV = re_heart.ReplaceAllString(newV, `&#x1f9e1; $1`)
-		newV = re_sad.ReplaceAllString(newV, `&#x1f622; $1`)
-		newV = re_wave1.ReplaceAllString(newV, `&#x1f30a; $1`)
-		newV = re_surprised.ReplaceAllString(newV, `&#x1f632; $1`)
-		newV = re_bowing.ReplaceAllString(newV, `&#x1f647; $1`)
-		newV = re_doh.ReplaceAllString(newV, `😣 $1`)
-		newV = re_thanks.ReplaceAllString(newV, `🙇🏼‍♀️ $1`)
-		newV = re_bow.ReplaceAllString(newV, `🙇🏼‍♀️ $1`)
-		newV = re_partypopper.ReplaceAllString(newV, `&#x1f389; $1`)
+		// リアクション
+		for v, k := range re_emoji {
+			newV = v.ReplaceAllString(newV, k)
+		}
+
 		if err := SetClipboardHTML(newV); err != nil {
 			fmt.Println("ERR:" + err.Error())
 		}
