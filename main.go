@@ -118,6 +118,13 @@ func main() {
 		re3 := regexp.MustCompile(`(?U)&nbsp;((</span>)+)</span></span><!--EndFragment-->`)
 		re_like := regexp.MustCompile(`like (\d+)`)
 		re_heart := regexp.MustCompile(`heart (\d+)`)
+		re_sad := regexp.MustCompile(`sad (\d+)`)
+		re_wave1 := regexp.MustCompile(`thewave1 (\d+)`)
+		re_surprised := regexp.MustCompile(`surprised (\d+)`)
+		re_bowing := regexp.MustCompile(`bowing (\d+)`)
+		re_doh := regexp.MustCompile(`doh (\d+)`)
+		re_thanks := regexp.MustCompile(`thanks (\d+)`)
+		re_bow := regexp.MustCompile(`bow (\d+)`)
 		// fmt.Println("GetClipboardHtml")
 		v, err := GetClipboardHtml()
 		if err != nil {
@@ -144,6 +151,13 @@ func main() {
 		newV = re3.ReplaceAllString(newV, `$1</td></tr></table></span></span><!--EndFragment-->`)
 		newV = re_like.ReplaceAllString(newV, `&#x1F44D; $1`)
 		newV = re_heart.ReplaceAllString(newV, `&#x1f9e1; $1`)
+		newV = re_sad.ReplaceAllString(newV, `&#x1f622; $1`)
+		newV = re_wave1.ReplaceAllString(newV, `&#x1f30a; $1`)
+		newV = re_surprised.ReplaceAllString(newV, `&#x1f632; $1`)
+		newV = re_bowing.ReplaceAllString(newV, `&#x1f647; $1`)
+		newV = re_doh.ReplaceAllString(newV, `😣 $1`)
+		newV = re_thanks.ReplaceAllString(newV, `🙇🏼‍♀️ $1`)
+		newV = re_bow.ReplaceAllString(newV, `🙇🏼‍♀️ $1`)
 		if err := SetClipboardHTML(newV); err != nil {
 			fmt.Println("ERR:" + err.Error())
 		}
