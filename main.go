@@ -124,6 +124,11 @@ func main() {
 			regexp.MustCompile(`thanks (\d+)`):            `🙇🏼‍♀️ $1`,
 			regexp.MustCompile(`bow (\d+)`):               `🙇🏼‍♀️ $1`,
 			regexp.MustCompile(`1f389_partypopper (\d+)`): `&#x1f389; $1`,
+			regexp.MustCompile(`seenoevil (\d+)`):         `🙈 $1`,
+			regexp.MustCompile(`smirk (\d+)`):             `😏 $1`,
+			regexp.MustCompile(`stareyes (\d+)`):          `🤩 $1`,
+			regexp.MustCompile(`clappinghands (\d+)`):     `👏 $1`,
+			regexp.MustCompile(`salute (\d+)`):            `(｡･з･)ゞ $1`,
 		}
 		re1 := regexp.MustCompile(`(?U)<span itemscope="" itemtype="http://schema.skype.com/Mention" itemid="\d">(.*)</span>`)
 		re2 := regexp.MustCompile(`(?U)<p style="margin: 0px;">(\[\d{4}/\d{2}/\d{2} \d+:\d{2}\]) (.*)</p>`)
@@ -136,7 +141,12 @@ func main() {
 			return
 		}
 		if strings.Contains(v, "<li>") {
-			fmt.Println("クリップボードの内容が誤っています。再取得してください。")
+			fmt.Println("クリップボードの内容が欠落しています。再取得してください。")
+			bufio.NewScanner(os.Stdin).Scan()
+			return
+		}
+		if strings.Contains(v, `<img role="presentation"`) {
+			fmt.Println("クリップボードに誤った形式でコピーされています。再取得してください。")
 			bufio.NewScanner(os.Stdin).Scan()
 			return
 		}
