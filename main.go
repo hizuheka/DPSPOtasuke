@@ -129,6 +129,10 @@ func main() {
 			regexp.MustCompile(`stareyes (\d+)`):          `🤩 $1`,
 			regexp.MustCompile(`clappinghands (\d+)`):     `👏 $1`,
 			regexp.MustCompile(`salute (\d+)`):            `(｡･з･)ゞ $1`,
+			regexp.MustCompile(`sweatgrinning (\d+)`):     `😅 $1`,
+			regexp.MustCompile(`laugh (\d+)`):             `😆 $1`,
+			regexp.MustCompile(`angry (\d+)`):             `😠 $1`,
+			regexp.MustCompile(`mmm (\d+)`):               `😊 $1`,
 		}
 		re1 := regexp.MustCompile(`(?U)<span itemscope="" itemtype="http://schema.skype.com/Mention" itemid="\d">(.*)</span>`)
 		re2 := regexp.MustCompile(`(?U)<p style="margin: 0px;">(\[\d{4}/\d{2}/\d{2} \d+:\d{2}\]) (.*)</p>`)
